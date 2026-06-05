@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nerdery Sales Pipeline Dashboard — 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #21253a;
+    --border: #2e334d;
+    --accent: #FFC836;
+    --accent2: #4a86e8;
+    --green: #43d692;
+    --red: #fb4c2f;
+    --orange: #ffad47;
+    --purple: #a479e2;
+    --text: #e8eaf0;
+    --muted: #7a80a0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px 0;
+  }
+  .header-top { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; }
+  header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+  header h1 span { color: var(--accent); }
+  .meta { color: var(--muted); font-size: 12px; }
+
+  /* ── Tabs ── */
+  .tab-bar { display: flex; gap: 4px; }
+  .tab-btn {
+    padding: 9px 20px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.2px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── Tab panels ── */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Dashboard layout ── */
+  .layout { padding: 24px 32px; display: grid; gap: 20px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+  .kpi {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; position: relative; overflow: hidden;
+  }
+  .kpi::before { content: ''; position: absolute; top:0; left:0; right:0; height:3px; background: var(--accent-color, var(--accent)); }
+  .kpi .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .kpi .value { font-size: 22px; font-weight: 700; line-height: 1; }
+  .kpi .sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
+  .kpi.warn .value { color: var(--orange); }
+  .kpi.danger .value { color: var(--red); }
+  .kpi.good .value { color: var(--green); }
+
+  /* ── Goals Section ── */
+  .goals-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .goal-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+  .goal-card-hdr { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+  .goal-card-hdr .gc-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); }
+  .goal-card-hdr .gc-sub { font-size: 11px; color: var(--muted); }
+  .goal-metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .gm { }
+  .gm-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 4px; }
+  .gm-goal { font-size: 22px; font-weight: 800; line-height: 1; margin-bottom: 2px; }
+  .gm-actual { font-size: 11px; color: var(--muted); margin-bottom: 7px; }
+  .gm-actual strong { color: var(--text); }
+  .gm-bar-wrap { display: flex; align-items: center; gap: 7px; }
+  .gm-bar-track { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; position: relative; }
+  .gm-bar-closed { position: absolute; left: 0; top: 0; height: 100%; background: var(--green); border-radius: 3px; }
+  .gm-bar-commit { position: absolute; top: 0; height: 100%; background: var(--accent); opacity: 0.5; }
+  .gm-pct { font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .gm-divider { border: none; border-top: 1px solid var(--border); margin: 14px 0 0; }
+
+  .insights { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .insight {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+    border-left: 4px solid var(--accent-color, var(--accent));
+  }
+  .insight .i-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .insight .i-text { font-size: 13px; line-height: 1.5; }
+  .insight .i-text strong { color: var(--accent); }
+
+  .chart-row { display: grid; gap: 20px; }
+  .chart-row.cols-2  { grid-template-columns: 1fr 1fr; }
+  .chart-row.cols-3  { grid-template-columns: 2fr 1fr 1fr; }
+  .chart-row.cols-21 { grid-template-columns: 2fr 1fr; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .card h3 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 16px; }
+  .card h3 em { color: var(--text); font-style: normal; text-transform: none; letter-spacing: 0; font-size: 14px; }
+  .chart-wrap { position: relative; }
+  .chart-wrap.tall { height: 280px; }
+  .chart-wrap.med  { height: 220px; }
+  .chart-wrap.sm   { height: 180px; }
+
+  /* MBANT dashboard card */
+  .mbant-summary-row { display: flex; gap: 10px; margin-bottom: 14px; }
+  .mbant-summary-pill { flex: 1; text-align: center; padding: 8px 6px; border-radius: 8px; border: 1px solid var(--border); }
+  .mbant-summary-pill .pill-num { font-size: 22px; font-weight: 800; line-height: 1; }
+  .mbant-summary-pill .pill-label { font-size: 10px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .mbant-scorecard { display: flex; flex-direction: column; gap: 8px; }
+  .mbant-row { display: grid; grid-template-columns: 28px 1fr 120px; align-items: center; gap: 10px; background: var(--bg); border-radius: 7px; padding: 9px 12px; }
+  .mbant-badge { width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
+  .mbant-info .mbant-criterion { font-size: 13px; font-weight: 600; }
+  .mbant-info .mbant-desc { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .mbant-counts { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+  .mbant-counts .pass-line { font-size: 12px; font-weight: 700; }
+  .mbant-count-track { width: 100px; background: var(--border); border-radius: 3px; height: 5px; }
+  .mbant-count-fill { height: 100%; border-radius: 3px; }
+
+  .funnel { display: flex; flex-direction: column; gap: 8px; }
+  .funnel-row { display: flex; align-items: center; gap: 10px; }
+  .funnel-bar-wrap { flex: 1; background: var(--bg); border-radius: 4px; height: 28px; overflow: hidden; }
+  .funnel-bar { height: 100%; border-radius: 4px; display: flex; align-items: center; padding: 0 10px; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; }
+  .funnel-label { font-size: 12px; color: var(--muted); width: 160px; text-align: right; white-space: nowrap; }
+  .funnel-val { font-size: 12px; width: 80px; text-align: right; font-weight: 600; }
+
+  .dq-list { display: flex; flex-direction: column; gap: 9px; }
+  .dq-row { display: flex; flex-direction: column; gap: 4px; }
+  .dq-top { display: flex; justify-content: space-between; font-size: 12px; }
+  .dq-top .reason { color: var(--text); }
+  .dq-top .count { color: var(--orange); font-weight: 700; }
+  .dq-track { background: var(--bg); border-radius: 3px; height: 6px; }
+  .dq-fill { height: 100%; border-radius: 3px; background: var(--orange); }
+
+  .rep-table { width: 100%; border-collapse: collapse; }
+  .rep-table th { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 8px 8px; text-align: right; }
+  .rep-table th:first-child { text-align: left; }
+  .rep-table td { padding: 7px 8px; font-size: 13px; border-top: 1px solid var(--border); }
+  .rep-table td:not(:first-child) { text-align: right; }
+  .rep-mini-bar { background: var(--bg); border-radius: 3px; height: 6px; margin-top: 3px; }
+  .rep-mini-fill { height: 100%; border-radius: 3px; }
+
+  /* ── Pipeline Detail tab ── */
+  .pipe-layout { padding: 20px 32px; }
+  .pipe-toolbar {
+    display: flex; gap: 12px; align-items: center; margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .pipe-toolbar input, .pipe-toolbar select {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); border-radius: 7px; padding: 7px 12px; font-size: 13px;
+    outline: none;
+  }
+  .pipe-toolbar input { flex: 1; min-width: 220px; }
+  .pipe-toolbar input::placeholder { color: var(--muted); }
+  .pipe-toolbar select option { background: var(--surface2); }
+  .pipe-count { font-size: 12px; color: var(--muted); margin-left: auto; }
+
+  .pipe-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+  table.pipe-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .pipe-table thead th {
+    background: var(--surface2); padding: 10px 12px; text-align: left;
+    font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.4px; white-space: nowrap; cursor: pointer; user-select: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .pipe-table thead th:hover { color: var(--text); }
+  .pipe-table thead th.sorted { color: var(--accent); }
+  .pipe-table thead th .sort-icon { margin-left: 4px; opacity: 0.5; font-size: 10px; }
+  .pipe-table thead th.sorted .sort-icon { opacity: 1; }
+  .pipe-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  .pipe-table tbody tr:hover { background: var(--surface2); }
+  .pipe-table tbody tr:last-child { border-bottom: none; }
+  .pipe-table td { padding: 10px 12px; vertical-align: top; }
+  .pipe-table td.title-cell { max-width: 320px; }
+  .pipe-table td.title-cell .opp-title { font-weight: 600; line-height: 1.3; }
+  .pipe-table td.title-cell .next-step { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .pipe-table td.val-cell { text-align: right; font-weight: 600; white-space: nowrap; }
+  .pipe-table td.num-cell { text-align: right; color: var(--muted); white-space: nowrap; }
+
+  .stage-pill {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 600; white-space: nowrap;
+  }
+  .stage-pill.qualifying      { background: rgba(74,134,232,0.15); color: #4a86e8; }
+  .stage-pill.qualified       { background: rgba(164,121,226,0.15); color: #a479e2; }
+  .stage-pill.proposed        { background: rgba(255,200,54,0.15); color: #FFC836; }
+  .stage-pill.conditional     { background: rgba(67,214,146,0.2); color: #43d692; }
+
+  .commit-pill {
+    display: inline-block; padding: 2px 7px; border-radius: 10px;
+    font-size: 10px; font-weight: 700;
+  }
+  .commit-pill.commit  { background: rgba(67,214,146,0.2); color: var(--green); }
+  .commit-pill.stretch { background: rgba(255,200,54,0.2); color: var(--accent); }
+
+  .prob-bar-wrap { display: flex; align-items: center; gap: 6px; }
+  .prob-bar-track { width: 44px; background: var(--border); border-radius: 3px; height: 5px; }
+  .prob-bar-fill { height: 100%; border-radius: 3px; }
+  .prob-label { font-size: 11px; color: var(--muted); }
+
+  /* ── MBANT tab ── */
+  .mbant-layout { padding: 20px 32px; display: grid; gap: 20px; }
+
+  .mbant-kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .mbant-kpi {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; text-align: center;
+  }
+  .mbant-kpi .mk-letter { font-size: 28px; font-weight: 900; line-height: 1; }
+  .mbant-kpi .mk-name { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 4px 0 10px; }
+  .mbant-kpi .mk-count { font-size: 20px; font-weight: 700; line-height: 1; }
+  .mbant-kpi .mk-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .mk-track { background: var(--bg); border-radius: 4px; height: 6px; margin-top: 10px; }
+  .mk-fill { height: 100%; border-radius: 4px; }
+
+  .mbant-summary-pills { display: flex; gap: 16px; }
+  .msm-pill {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 18px; display: flex; align-items: center; gap: 14px;
+  }
+  .msm-num { font-size: 36px; font-weight: 900; line-height: 1; }
+  .msm-txt .msm-label { font-size: 14px; font-weight: 700; }
+  .msm-txt .msm-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* MBANT per-opp table */
+  .mbant-toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .mbant-toolbar select, .mbant-toolbar input {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); border-radius: 7px; padding: 7px 12px; font-size: 13px; outline: none;
+  }
+  .mbant-toolbar input { flex: 1; min-width: 200px; }
+  .mbant-toolbar input::placeholder { color: var(--muted); }
+  .mbant-toolbar select option { background: var(--surface2); }
+
+  .mbant-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+  table.mbant-opp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .mbant-opp-table thead th {
+    background: var(--surface2); padding: 10px 12px; text-align: left;
+    font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.4px; white-space: nowrap; border-bottom: 1px solid var(--border);
+  }
+  .mbant-opp-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; cursor: pointer; }
+  .mbant-opp-table tbody tr:hover { background: var(--surface2); }
+  .mbant-opp-table tbody tr:last-child { border-bottom: none; }
+  .mbant-opp-table td { padding: 10px 12px; vertical-align: middle; }
+  .mbant-opp-table td.title-col { max-width: 240px; }
+  .mbant-opp-table td.title-col .t { font-weight: 600; line-height: 1.3; }
+  .mbant-opp-table td.title-col .r { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .dot { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-size: 11px; font-weight: 800; }
+  .dot.yes { background: rgba(67,214,146,0.2); color: var(--green); }
+  .dot.no  { background: rgba(46,51,77,0.8); color: var(--muted); }
+
+  .score-bar { display: flex; gap: 3px; }
+  .score-seg { width: 12px; height: 12px; border-radius: 3px; }
+
+  /* expandable detail row */
+  .detail-row { display: none; background: var(--surface2) !important; }
+  .detail-row.open { display: table-row; }
+  .detail-inner { padding: 12px 16px 16px; }
+  .detail-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 8px; }
+  .detail-cell .dc-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 4px; }
+  .detail-cell .dc-val { font-size: 12px; line-height: 1.5; color: var(--text); }
+  .detail-cell .dc-val.empty { color: var(--muted); font-style: italic; }
+
+  footer { text-align: center; padding: 20px; color: var(--muted); font-size: 11px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <h1>Nerdery <span>Sales Pipeline</span> Dashboard</h1>
+    <div class="meta">As of June 2, 2026 &nbsp;·&nbsp; Q2 2026 &nbsp;·&nbsp; Source: Weekly Pipeline Meeting Data</div>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('dashboard', this)">Dashboard</button>
+    <button class="tab-btn" onclick="switchTab('pipeline', this)">Pipeline Detail</button>
+    <button class="tab-btn" onclick="switchTab('mbant', this)">MBANT Qualification</button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════════ TAB 1 -->
+<div id="tab-dashboard" class="tab-panel active">
+<div class="layout">
+
+  <div class="kpi-row">
+    <div class="kpi" style="--accent-color:var(--accent)"><div class="label">Total Pipeline</div><div class="value">$15.7M</div><div class="sub">50 active opps</div></div>
+    <div class="kpi good" style="--accent-color:var(--green)"><div class="label">Commit</div><div class="value">$1.1M</div><div class="sub">5 opps · 41% of $2.7M goal</div></div>
+    <div class="kpi warn" style="--accent-color:var(--orange)"><div class="label">Stretch</div><div class="value">$2.6M</div><div class="sub">8 opps</div></div>
+    <div class="kpi danger" style="--accent-color:var(--red)"><div class="label">Win Rate</div><div class="value">10%</div><div class="sub">6 won / 60 closed YTD</div></div>
+    <div class="kpi danger" style="--accent-color:var(--purple)"><div class="label">MBANT Qualified</div><div class="value">18%</div><div class="sub">9 of 50 opps fully qualified</div></div>
+    <div class="kpi" style="--accent-color:var(--accent2)"><div class="label">Avg Days Open</div><div class="value">93</div><div class="sub">2 opps past close date</div></div>
+  </div>
+
+  <!-- ── Goals vs Targets ── -->
+  <div class="goals-row">
+    <!-- Q2 Card -->
+    <div class="goal-card">
+      <div class="goal-card-hdr">
+        <span class="gc-title">Q2 2026 Goals</span>
+        <span class="gc-sub">26 days remaining &nbsp;·&nbsp; ends Jun 30</span>
+      </div>
+      <div class="goal-metrics-grid">
+        <div class="gm">
+          <div class="gm-label">Signings</div>
+          <div class="gm-goal">$1.5M</div>
+          <div class="gm-actual"><strong>$100K</strong> closed &nbsp;+&nbsp; $1.1M commit in-flight</div>
+          <div class="gm-bar-wrap">
+            <div class="gm-bar-track">
+              <div class="gm-bar-closed" style="width:6.7%"></div>
+              <div class="gm-bar-commit" style="left:6.7%;width:73.1%"></div>
+            </div>
+            <span class="gm-pct" style="color:var(--orange)">80% w/ commit</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Annual Card -->
+    <div class="goal-card">
+      <div class="goal-card-hdr">
+        <span class="gc-title">Annual 2026 Goals</span>
+        <span class="gc-sub">Full year</span>
+      </div>
+      <div class="goal-metrics-grid">
+        <div class="gm">
+          <div class="gm-label">Signings</div>
+          <div class="gm-goal">$9.5M</div>
+          <div class="gm-actual"><strong>$620K</strong> closed YTD &nbsp;+&nbsp; $1.1M commit</div>
+          <div class="gm-bar-wrap">
+            <div class="gm-bar-track">
+              <div class="gm-bar-closed" style="width:6.5%"></div>
+              <div class="gm-bar-commit" style="left:6.5%;width:11.5%"></div>
+            </div>
+            <span class="gm-pct" style="color:var(--red)">6.5% closed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="insights">
+    <div class="insight" style="--accent-color:var(--red)">
+      <div class="i-label">⚠ Qualification Risk</div>
+      <div class="i-text"><strong>31 of 50 active opps (62%)</strong> have zero MBANT criteria met. The #1 reason for disqualification all year is "Unresponsive client" (18×) — a direct indicator of under-qualified pipeline being entered.</div>
+    </div>
+    <div class="insight" style="--accent-color:var(--orange)">
+      <div class="i-label">⚠ Pipeline Concentration</div>
+      <div class="i-text"><strong>7 large deals = 73% of pipeline value ($11.4M)</strong>, but all are in early stages. If even 2 slip, Q2 close coverage drops significantly. Patrick and Sumner hold 94% of value.</div>
+    </div>
+    <div class="insight" style="--accent-color:var(--green)">
+      <div class="i-label">✓ Positive Momentum</div>
+      <div class="i-text">Pipeline grew from <strong>$13.1M → $15.7M (+20%)</strong> since late April. Commit pipeline went from $0 to $1.1M in 5 weeks. <strong>Patrick Loftus</strong> accounts for all 6 closed-won deals in 2026.</div>
+    </div>
+  </div>
+
+  <div class="chart-row cols-21">
+    <div class="card">
+      <h3>Weekly Pipeline Trend &nbsp;<em>Total vs. Commit</em></h3>
+      <div class="chart-wrap tall"><canvas id="trendChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Commit · Stretch · Uncommitted</h3>
+      <div class="chart-wrap med"><canvas id="commitDonut"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-row cols-2">
+    <div class="card">
+      <h3>Pipeline by Sales Rep</h3>
+      <table class="rep-table"><thead><tr><th>Rep</th><th>Opps</th><th>Pipeline Value</th><th>Share</th></tr></thead><tbody id="repTable"></tbody></table>
+    </div>
+    <div class="card">
+      <h3>Pipeline by Vertical</h3>
+      <div class="chart-wrap med"><canvas id="vertChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-row cols-3">
+    <div class="card">
+      <h3>Stage Funnel</h3>
+      <div class="funnel" id="stageFunnel"></div>
+    </div>
+    <div class="card">
+      <h3>Deal Type Mix</h3>
+      <div class="chart-wrap sm"><canvas id="typeDonut"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Expected Close by Month</h3>
+      <div class="chart-wrap sm"><canvas id="closeMonth"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-row cols-3">
+    <div class="card">
+      <h3>Closed Opp Outcomes <em style="font-size:11px;color:var(--muted)"> — 60 opps YTD</em></h3>
+      <div class="chart-wrap sm"><canvas id="outcomeChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Top Disqualification Reasons</h3>
+      <div class="dq-list" id="dqList"></div>
+    </div>
+    <div class="card">
+      <h3>Deal Qualification Health <em style="font-size:11px;color:var(--muted)"> — 50 active opps</em></h3>
+      <div class="mbant-summary-row">
+        <div class="mbant-summary-pill" style="background:rgba(67,214,146,0.08);border-color:rgba(67,214,146,0.3)"><div class="pill-num" style="color:var(--green)">9</div><div class="pill-label">Fully Qualified</div></div>
+        <div class="mbant-summary-pill" style="background:rgba(255,200,54,0.08);border-color:rgba(255,200,54,0.3)"><div class="pill-num" style="color:var(--accent)">10</div><div class="pill-label">Partially Qualified</div></div>
+        <div class="mbant-summary-pill" style="background:rgba(251,76,47,0.08);border-color:rgba(251,76,47,0.3)"><div class="pill-num" style="color:var(--red)">31</div><div class="pill-label">Not Yet Qualified</div></div>
+      </div>
+      <div class="mbant-scorecard" id="mbantGrid"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ TAB 2 -->
+<div id="tab-pipeline" class="tab-panel">
+<div class="pipe-layout">
+
+  <div class="pipe-toolbar">
+    <input type="text" id="pipeSearch" placeholder="Search by rep, title, vertical, next step…" oninput="renderPipeline()">
+    <select id="pipeRep" onchange="renderPipeline()">
+      <option value="">All Reps</option>
+      <option>Adam Witter</option><option>Eva Ward</option><option>Patrick Loftus</option>
+      <option>Ryan D Trevarthen</option><option>Stephanie Jean</option><option>Sumner Crosby</option>
+    </select>
+    <select id="pipeStage" onchange="renderPipeline()">
+      <option value="">All Stages</option>
+      <option>Qualifying</option><option>Qualified Opportunity</option>
+      <option>Proposed</option><option>Conditional Agreement</option>
+    </select>
+    <select id="pipeCommit" onchange="renderPipeline()">
+      <option value="">All Commit</option>
+      <option>Commit</option><option>Stretch</option><option>None</option>
+    </select>
+    <span class="pipe-count" id="pipeCount"></span>
+  </div>
+
+  <div class="pipe-table-wrap">
+    <table class="pipe-table">
+      <thead>
+        <tr>
+          <th onclick="sortPipeline('rep')" id="sh-rep">Rep <span class="sort-icon">↕</span></th>
+          <th>Opportunity</th>
+          <th onclick="sortPipeline('value')" id="sh-value">Value <span class="sort-icon">↕</span></th>
+          <th onclick="sortPipeline('stage')" id="sh-stage">Stage <span class="sort-icon">↕</span></th>
+          <th onclick="sortPipeline('prob')" id="sh-prob">Prob <span class="sort-icon">↕</span></th>
+          <th>Commit</th>
+          <th onclick="sortPipeline('days_open')" id="sh-days_open">Days Open <span class="sort-icon">↕</span></th>
+          <th onclick="sortPipeline('close')" id="sh-close">Close <span class="sort-icon">↕</span></th>
+          <th>Vertical</th>
+        </tr>
+      </thead>
+      <tbody id="pipeBody"></tbody>
+    </table>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ TAB 3 -->
+<div id="tab-mbant" class="tab-panel">
+<div class="mbant-layout">
+
+  <!-- 5 criterion KPIs -->
+  <div class="mbant-kpi-row" id="mbantKpiRow"></div>
+
+  <!-- 3 summary pills -->
+  <div class="mbant-summary-pills">
+    <div class="msm-pill" style="border-color:rgba(67,214,146,0.3)">
+      <div class="msm-num" style="color:var(--green)">9</div>
+      <div class="msm-txt">
+        <div class="msm-label">Fully Qualified</div>
+        <div class="msm-desc">All 5 MBANT criteria confirmed — ready to push to close</div>
+      </div>
+    </div>
+    <div class="msm-pill" style="border-color:rgba(255,200,54,0.3)">
+      <div class="msm-num" style="color:var(--accent)">10</div>
+      <div class="msm-txt">
+        <div class="msm-label">Partially Qualified</div>
+        <div class="msm-desc">Some criteria met — needs targeted discovery to fill gaps</div>
+      </div>
+    </div>
+    <div class="msm-pill" style="border-color:rgba(251,76,47,0.3)">
+      <div class="msm-num" style="color:var(--red)">31</div>
+      <div class="msm-txt">
+        <div class="msm-label">Not Yet Qualified</div>
+        <div class="msm-desc">Zero criteria met — high disqualification risk, needs immediate attention</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Per-opp table -->
+  <div class="card" style="padding:20px">
+    <h3 style="margin-bottom:14px">Per-Opportunity MBANT Status &nbsp;<em style="font-size:11px;color:var(--muted)">— click any row to see detail</em></h3>
+
+    <div class="mbant-toolbar">
+      <input type="text" id="mbantSearch" placeholder="Search rep or opportunity…" oninput="renderMbant()">
+      <select id="mbantFilter" onchange="renderMbant()">
+        <option value="">All Opps</option>
+        <option value="full">Fully Qualified (5/5)</option>
+        <option value="partial">Partially Qualified</option>
+        <option value="none">Not Yet Qualified (0/5)</option>
+      </select>
+      <select id="mbantRep" onchange="renderMbant()">
+        <option value="">All Reps</option>
+        <option>Adam Witter</option><option>Eva Ward</option><option>Patrick Loftus</option>
+        <option>Ryan D Trevarthen</option><option>Stephanie Jean</option><option>Sumner Crosby</option>
+      </select>
+    </div>
+
+    <div class="mbant-table-wrap">
+      <table class="mbant-opp-table">
+        <thead>
+          <tr>
+            <th>Opportunity</th>
+            <th>Value</th>
+            <th>Score</th>
+            <th title="Metrics">M</th>
+            <th title="Budget">B</th>
+            <th title="Authority">A</th>
+            <th title="Need">N</th>
+            <th title="Timeline">T</th>
+          </tr>
+        </thead>
+        <tbody id="mbantBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<footer>Nerdery Sales Pipeline Dashboard · Built from 2026 Weekly Pipeline Meeting Data · June 4, 2026</footer>
+
+<script>
+// ════════════════════════════════════════════════ DATA
+const DASH = {"trend":[{"date":"Feb 25","val":13728240,"commit":0},{"date":"Mar 4","val":14387005,"commit":0},{"date":"Mar 11","val":15019205,"commit":227200},{"date":"Mar 18","val":14562005,"commit":46440},{"date":"Mar 24","val":14462005,"commit":46440},{"date":"Mar 31","val":15093160,"commit":0},{"date":"Apr 1","val":15167568,"commit":0},{"date":"Apr 7","val":14795793,"commit":0},{"date":"Apr 14","val":14283548,"commit":0},{"date":"Apr 21","val":13293548,"commit":0},{"date":"Apr 28","val":13059348,"commit":0},{"date":"May 5","val":13509468,"commit":179428},{"date":"May 12","val":13783639,"commit":1008304},{"date":"May 19","val":14031659,"commit":1091324},{"date":"May 26","val":14026618,"commit":1096283},{"date":"Jun 2","val":15653013,"commit":1096283}],"by_rep":{"Sumner Crosby":{"count":21,"value":7735138},"Patrick Loftus":{"count":13,"value":7128225},"Ryan D Trevarthen":{"count":6,"value":325000},"Stephanie Jean":{"count":7,"value":195000},"Eva Ward":{"count":2,"value":184650},"Adam Witter":{"count":1,"value":85000}},"by_vert":{"Public Sector":{"count":23,"value":10315378},"Non-Profit/Education":{"count":3,"value":3530000},"Unassigned":{"count":19,"value":1488760},"Higher Education":{"count":4,"value":233875},"Insurance":{"count":1,"value":85000}},"by_stage":{"Qualifying":{"count":30,"value":8126170},"Qualified Opportunity":{"count":9,"value":5551550},"Proposed":{"count":8,"value":1067030},"Conditional Agreement":{"count":3,"value":908263}},"by_month":{"May 2026":{"value":833896},"Jun 2026":{"value":2232535},"Jul 2026":{"value":1338000},"Aug 2026":{"value":3460000},"Sep 2026":{"value":1977675},"Nov 2026":{"value":1700000},"Jan 2027":{"value":2415420}},"by_type":{"Large Deal":{"value":11373111},"POC/ Wedge":{"value":2574902},"Phase 2 and Mid Sized":{"value":1705000}},"closed":{"won":6,"disq":47,"lost":7,"won_val":620460,"disq_val":5599135,"lost_val":1330000},"dq_reasons":{"Unresponsive client":18,"Client is not moving ahead with the engagement":11,"Nerdery decided not to pursue":6,"Budget for project was revoked":5,"Improper qualification":4,"Client provided inaccurate budget":3},"mbant":{"M":{"yes":13,"no":34},"B":{"yes":13,"no":35},"A":{"yes":16,"no":31},"N":{"yes":16,"no":31},"T":{"yes":13,"no":34}},"commit_breakdown":{"Commit":1096283,"Stretch":2629010,"Uncommitted":11927720}};
+
+const OPPS = [{"rep":"Adam Witter","title":"FCP | Migration to CX Agent Studio","value":85000,"stage":"Proposed","prob":50,"commit":"Stretch","vertical":"Insurance","days_open":68,"close":"Jun 12","next_step":"Present ballpark to Digitz and then discuss with FCP.","timeline":"POC/ Wedge"},{"rep":"Eva Ward","title":"PTC | 2026 | PredictHQ Referral/Resale","value":1630,"stage":"Qualifying","prob":10,"commit":"","vertical":"Public Sector","days_open":140,"close":"Jun 30","next_step":"1/13 Working with Adam and Hollie on a one-time referral agreement.","timeline":"POC/ Wedge"},{"rep":"Eva Ward","title":"MN DPS | July 1 '26 - Nov 30 '26 | Yr 3 OTS Managed Services MN DPS","value":183020,"stage":"Proposed","prob":50,"commit":"Commit","vertical":"Public Sector","days_open":15,"close":"Jun 30","next_step":"5/18 - Connecting with Carahsoft for Minnesota M&O contract amending from July 1, 2026 through November 30, 2026.","timeline":"POC/ Wedge"},{"rep":"Patrick Loftus","title":"PA Turnpike | Traffic Pattern Prediction Phase 2","value":325000,"stage":"Proposed","prob":50,"commit":"Stretch","vertical":"Public Sector","days_open":140,"close":"Jun 15","next_step":"6/1 - Meeting with Sandeep on Wed with Adam to clarify Roles and Responsibilities for Phase 2.","timeline":"Phase 2 and Mid Sized"},{"rep":"Patrick Loftus","title":"Chattanooga - Permit Solution","value":145250,"stage":"Proposed","prob":50,"commit":"Stretch","vertical":"Public Sector","days_open":35,"close":"Jun 22","next_step":"6/1 - Met with Mayor Tim and team. Presented our proposed solution. We had good reception.","timeline":"POC/ Wedge"},{"rep":"Patrick Loftus","title":"PERMnet - Healthcare MVP v1","value":168760,"stage":"Proposed","prob":50,"commit":"Stretch","vertical":"","days_open":91,"close":"Jun 26","next_step":"6/1 - Reached out a couple times to reengage. Waiting on reply.","timeline":"POC/ Wedge"},{"rep":"Patrick Loftus","title":"TN Comptroller - ADA Solution","value":200000,"stage":"Qualifying","prob":10,"commit":"","vertical":"","days_open":34,"close":"Jul 24","next_step":"6/1 - Reaching back out to Amy to see if they heard anything.","timeline":"Phase 2 and Mid Sized"},{"rep":"Patrick Loftus","title":"FIU - Analytics Research Project","value":100000,"stage":"Qualifying","prob":10,"commit":"","vertical":"","days_open":21,"close":"Jul 27","next_step":"6/1 - Google Deal closing in July will have SOW work coming out which will be slated for us.","timeline":"POC/ Wedge"},{"rep":"Patrick Loftus","title":"NCDIT - AI Accelerator Pilot to Prod","value":100000,"stage":"Qualifying","prob":10,"commit":"","vertical":"Public Sector","days_open":34,"close":"Aug 03","next_step":"6/1 - Realign with NCDIT - This was on hold until we were done with Project.","timeline":"POC/ Wedge"},{"rep":"Patrick Loftus","title":"State of MD - ADA","value":150000,"stage":"Proposed","prob":50,"commit":"Stretch","vertical":"","days_open":69,"close":"Aug 10","next_step":"6/1 - We have secured a call in July to keep pushing cycle.","timeline":"POC/ Wedge"},{"rep":"Patrick Loftus","title":"Anne Arundel Cty - ADA Remediation Solution","value":100000,"stage":"Qualifying","prob":10,"commit":"","vertical":"","days_open":21,"close":"Aug 17","next_step":"Meeting on Thursday at 3pm ET.","timeline":"POC/ Wedge"},{"rep":"Patrick Loftus","title":"VTTI - Dock2Door Hermes - GCP - Phase 1","value":1627675,"stage":"Qualified Opportunity","prob":25,"commit":"","vertical":"Public Sector","days_open":210,"close":"Sep 01","next_step":"6/1 - Tony and I represented Nerdery with VTTI at their Coalition meeting. Everything went great.","timeline":"Large Deal"},{"rep":"Patrick Loftus","title":"TN DFA - ADA Solution","value":250000,"stage":"Qualifying","prob":10,"commit":"","vertical":"","days_open":84,"close":"Sep 21","next_step":"5/19 - Moved call back to June.","timeline":"Phase 2 and Mid Sized"},{"rep":"Patrick Loftus","title":"VTTI - Hermes Assistant - Phase 2","value":2415420,"stage":"Qualifying","prob":10,"commit":"","vertical":"Public Sector","days_open":6,"close":"Jan 18","next_step":"Phase 1 needs to start.","timeline":"Large Deal"},{"rep":"Patrick Loftus","title":"University of Mary Washington Tableau Developer SA Opp","value":75000,"stage":"Qualifying","prob":10,"commit":"","vertical":"Higher Education","days_open":62,"close":"Feb 15","next_step":"5/27 - Waiting on Funding Via Virginia Grant.","timeline":"POC/ Wedge"},{"rep":"Patrick Loftus","title":"VTTI - Hermes Assistant - Phase 3","value":1471120,"stage":"Qualifying","prob":10,"commit":"","vertical":"Public Sector","days_open":6,"close":"May 24","next_step":"Phase 2 needs to start.","timeline":"Large Deal"},{"rep":"Ryan D Trevarthen","title":"Neology - Project 1 of 5. Automated OCR Retraining (MLOps)","value":75000,"stage":"Qualified Opportunity","prob":25,"commit":"","vertical":"","days_open":48,"close":"Jul 24","next_step":"05.27 - Need to up the level of effort and call both Sean and Chris.","timeline":"POC/ Wedge"},{"rep":"Ryan D Trevarthen","title":"AI-Enabled Construction Scheduling","value":50000,"stage":"Qualifying","prob":10,"commit":"Stretch","vertical":"","days_open":6,"close":"Jul 24","next_step":"Execute mutual NDA via MCG's HR. Deliver 15 architecture diagrams.","timeline":"POC/ Wedge"},{"rep":"Ryan D Trevarthen","title":"Neology 2 of 5 - Agentic Collections","value":100000,"stage":"Qualifying","prob":10,"commit":"","vertical":"","days_open":4,"close":"Jul 24","next_step":"05.29 - Discussion with Sean and Chris Monday.","timeline":"POC/ Wedge"},{"rep":"Ryan D Trevarthen","title":"Neology 4 of 5 - neoBOSS GKE Modernization","value":0,"stage":"Qualifying","prob":10,"commit":"","vertical":"","days_open":4,"close":"Jul 24","next_step":"05.29 - Discussion with Sean and Chris Monday.","timeline":"POC/ Wedge"},{"rep":"Ryan D Trevarthen","title":"Neology 3 of 5 - MANTIS-4D Agentic AI","value":50000,"stage":"Qualifying","prob":10,"commit":"","vertical":"","days_open":4,"close":"Aug 28","next_step":"05.29 - Discussion with Sean and Chris Monday.","timeline":"POC/ Wedge"},{"rep":"Ryan D Trevarthen","title":"Neology 5 of 5 - Predictive Dynamic Pricing","value":50000,"stage":"Qualifying","prob":10,"commit":"","vertical":"","days_open":4,"close":"Aug 28","next_step":"05.29 - Discussion with Sean and Chris Monday.","timeline":"POC/ Wedge"},{"rep":"Stephanie Jean","title":"The Akintonde Real Estate Group - Gemini Enterprise Workshop","value":5000,"stage":"Proposed","prob":50,"commit":"Commit","vertical":"","days_open":29,"close":"Jun 30","next_step":"6/1 - Proposal with client for initial review.","timeline":"POC/ Wedge"},{"rep":"Stephanie Jean","title":"Midwest Services Bureau - Google Workspace + GEBE","value":20000,"stage":"Qualifying","prob":10,"commit":"","vertical":"","days_open":11,"close":"Jun 30","next_step":"6/1 - Working with Gina Frank to understand discounts.","timeline":"POC/ Wedge"},{"rep":"Stephanie Jean","title":"True Anomaly - Gemini Enterprise Foundation","value":50000,"stage":"Qualifying","prob":10,"commit":"","vertical":"","days_open":76,"close":"Jul 31","next_step":"6/1 - Looping in Rocky (803 Tech) to support with a Security Workshop.","timeline":"POC/ Wedge"},{"rep":"Stephanie Jean","title":"Republic Bank - DocumentAI","value":15000,"stage":"Qualifying","prob":10,"commit":"","vertical":"","days_open":25,"close":"Jul 31","next_step":"Scheduling a secondary call to showcase GE and DocumentAI.","timeline":"POC/ Wedge"},{"rep":"Stephanie Jean","title":"Erika's Lighthouse - D&A Foundation Implementation","value":75000,"stage":"Qualifying","prob":10,"commit":"","vertical":"","days_open":21,"close":"Jul 31","next_step":"6/1 - Client identified 3 specific use cases as a starting point.","timeline":"POC/ Wedge"},{"rep":"Stephanie Jean","title":"Midwest Services Bureau - Gemini Enterprise Workshop","value":5000,"stage":"Proposed","prob":50,"commit":"Stretch","vertical":"","days_open":19,"close":"Jul 31","next_step":"5/22 - Proposal with client for GE Workshop.","timeline":"POC/ Wedge"},{"rep":"Stephanie Jean","title":"Erika's Lighthouse - Gemini Enterprise Foundation","value":25000,"stage":"Qualifying","prob":10,"commit":"","vertical":"","days_open":19,"close":"Sep 30","next_step":"5/22 - Discussed options around a public facing agent for schools.","timeline":"POC/ Wedge"},{"rep":"Sumner Crosby","title":"Hawaii DCCA - ADA Compliance","value":74367,"stage":"Conditional Agreement","prob":90,"commit":"Commit","vertical":"Public Sector","days_open":91,"close":"Apr 30","next_step":"Following up with the customer on 3/23 to determine final path.","timeline":"POC/ Wedge"},{"rep":"Sumner Crosby","title":"UT OGM - Phase II Discovery","value":175000,"stage":"Conditional Agreement","prob":90,"commit":"Commit","vertical":"Public Sector","days_open":169,"close":"May 29","next_step":"Meet with other key stakeholders to start scoping a second phase.","timeline":"POC/ Wedge"},{"rep":"Sumner Crosby","title":"UT OGM - Phase II Fixed Capacity","value":658896,"stage":"Conditional Agreement","prob":90,"commit":"Commit","vertical":"Public Sector","days_open":55,"close":"May 29","next_step":"Align with Mick follow team approval on initial LOEs on 4/9.","timeline":"Large Deal"},{"rep":"Sumner Crosby","title":"State of Minnesota | Citation Analytics Full Build | GCP","value":500000,"stage":"Qualifying","prob":10,"commit":"","vertical":"Public Sector","days_open":166,"close":"Jun 15","next_step":"1/9: We are working on a discovery project that would come before this project.","timeline":"Large Deal"},{"rep":"Sumner Crosby","title":"CO DOR - Open Records Routing","value":95000,"stage":"Qualified Opportunity","prob":25,"commit":"","vertical":"Public Sector","days_open":169,"close":"Jun 18","next_step":"Met with customer 5/6 and they would like a proposal.","timeline":"POC/ Wedge"},{"rep":"Sumner Crosby","title":"MA Trial Courts - Data Foundations","value":200000,"stage":"Qualifying","prob":10,"commit":"","vertical":"Public Sector","days_open":169,"close":"Jun 18","next_step":"Meeting with customer 12/22 to begin scoping.","timeline":"Phase 2 and Mid Sized"},{"rep":"Sumner Crosby","title":"SBU - GCP Foundations","value":58891,"stage":"Qualified Opportunity","prob":25,"commit":"","vertical":"Higher Education","days_open":77,"close":"Jun 18","next_step":"Mike (SBU) to review initial proposal and determine go/no go.","timeline":"POC/ Wedge"},{"rep":"Sumner Crosby","title":"SBU - Training & Enablement","value":39984,"stage":"Qualified Opportunity","prob":25,"commit":"","vertical":"Higher Education","days_open":77,"close":"Jun 18","next_step":"Mike (SBU) to review initial proposal and determine go/no go.","timeline":"POC/ Wedge"},{"rep":"Sumner Crosby","title":"Arapahoe County CO - Gemini Foundations","value":125000,"stage":"Qualified Opportunity","prob":25,"commit":"","vertical":"Public Sector","days_open":77,"close":"Jun 23","next_step":"Meeting with Keith on 5/7 to start scoping.","timeline":"POC/ Wedge"},{"rep":"Sumner Crosby","title":"SUNY - AI Advisor","value":280000,"stage":"Qualified Opportunity","prob":25,"commit":"","vertical":"Non-Profit/Education","days_open":259,"close":"Jun 26","next_step":"Submitted LOI on 9/15.","timeline":"Phase 2 and Mid Sized"},{"rep":"Sumner Crosby","title":"SUNY - PSO GCP Landing Zone","value":250000,"stage":"Qualified Opportunity","prob":25,"commit":"","vertical":"Non-Profit/Education","days_open":77,"close":"Jul 01","next_step":"PSO scope delivered 5/3. Takito and Sumner to review.","timeline":"Phase 2 and Mid Sized"},{"rep":"Sumner Crosby","title":"UCSB - Gemini Enterprise Foundations","value":60000,"stage":"Qualifying","prob":10,"commit":"","vertical":"Higher Education","days_open":67,"close":"Jul 29","next_step":"Meet with customer 1st week of April.","timeline":"POC/ Wedge"},{"rep":"Sumner Crosby","title":"Travis County TX - Gemini Enterprise Foundations","value":83000,"stage":"Qualifying","prob":10,"commit":"","vertical":"Public Sector","days_open":126,"close":"Jul 31","next_step":"Eric and Mark Hardy working to get a second meeting with the customer.","timeline":"POC/ Wedge"},{"rep":"Sumner Crosby","title":"LAC BOS - ADA Compliance","value":75000,"stage":"Qualifying","prob":10,"commit":"","vertical":"Public Sector","days_open":77,"close":"Jul 31","next_step":"Bryan working with customer on follow up times for a second meeting.","timeline":"POC/ Wedge"},{"rep":"Sumner Crosby","title":"UT DEQ - Agentic Workflows","value":200000,"stage":"Qualifying","prob":10,"commit":"","vertical":"Public Sector","days_open":36,"close":"Jul 31","next_step":"Meet with Channing, Mick to get in front of the customer.","timeline":"Phase 2 and Mid Sized"},{"rep":"Sumner Crosby","title":"SUNY - Virtual Teacher Assistant Services","value":3000000,"stage":"Qualified Opportunity","prob":25,"commit":"","vertical":"Non-Profit/Education","days_open":433,"close":"Aug 05","next_step":"10/30 - Working with Jessica/Brendan to schedule office hours.","timeline":"Large Deal"},{"rep":"Sumner Crosby","title":"LA County RRCC - Gemini Enterprise Foundations","value":10000,"stage":"Qualifying","prob":10,"commit":"","vertical":"Public Sector","days_open":169,"close":"Aug 19","next_step":"Meet with customer week of 12/21.","timeline":"POC/ Wedge"},{"rep":"Sumner Crosby","title":"CSULB - ADA Accessibility","value":75000,"stage":"Qualifying","prob":10,"commit":"","vertical":"Public Sector","days_open":77,"close":"Sep 14","next_step":"Loren (Google FSR) to set up follow up for week of 3/20.","timeline":"POC/ Wedge"},{"rep":"Sumner Crosby","title":"MN DPS | 2024 | MNCrash 2.0 App Rebuild","value":1700000,"stage":"Qualifying","prob":10,"commit":"Stretch","vertical":"Public Sector","days_open":740,"close":"Nov 02","next_step":"12/16: AC shared with Mike that this will be a late 26' early 27' engagement.","timeline":"Large Deal"},{"rep":"Sumner Crosby","title":"WA TSC - Blood Program Routing","value":75000,"stage":"Qualifying","prob":10,"commit":"","vertical":"Public Sector","days_open":210,"close":"Dec 25","next_step":"Follow up 1st week of April. We adjusted the end customer to a different organization.","timeline":"POC/ Wedge"}];
+
+const MBANT_OPPS = [{"rep":"Adam Witter","title":"FCP | Migration to CX Agent Studio","value":85000,"stage":0.5,"commit":"Stretch","M":"Yes","B":"Yes","A":"Yes","N":"Yes","T":"Yes","metrics":"Reduce calls with less than 5 turns. Increase the number of contracted claims via the bot.","budget":"They are finding budget for this to improve the performance of the bot.","authority":"Danny CEO is the budget holder, but our access is primarily through Scott.","need":"Google had placed Dialogflow Playbooks into Legacy status and in order to take advantage of new features we need to migrate to CX studio.","timeline_txt":"Client is looking to align fully, but wants to get started ASAP."},{"rep":"Eva Ward","title":"PTC | 2026 | PredictHQ Referral/Resale","value":1630,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"","timeline_txt":""},{"rep":"Eva Ward","title":"MN DPS | Yr 3 OTS Managed Services","value":183020,"stage":0.5,"commit":"Commit","M":"Yes","B":"Yes","A":"Yes","N":"Yes","T":"Yes","metrics":"n/a","budget":"yes","authority":"Mike Hanson","need":"The customer needs ongoing support and operation services","timeline_txt":"June 30, 2026"},{"rep":"Patrick Loftus","title":"VTTI - Dock2Door Hermes - GCP - Phase 1","value":1627675,"stage":0.25,"commit":"","M":"YES","B":"No","A":"YES","N":"YES","T":"YES","metrics":"Utilizing a P2P system to facilitate sharing data via a Transportation Coalition.","budget":"Go Virginia Grant / Google Funding","authority":"Kaitlyn and Mac make the decision but their Boss Myra is the ultimate DM.","need":"SOW to obtain grant funding to create a logistics federated data sharing platform","timeline_txt":"They are looking to get started Late Q3 / Early Q4 when funding comes."},{"rep":"Patrick Loftus","title":"PA Turnpike | Traffic Pattern Prediction Phase 2","value":325000,"stage":0.5,"commit":"Stretch","M":"Yes","B":"Yes","A":"Yes","N":"Yes","T":"Yes","metrics":"Converting model to a hardened prod model with key converted congestion metrics.","budget":"PTC has $1M budget for AI initiatives plus other funding sources.","authority":"Bob Taylor CTGO, April Rothermel Asst CTO","need":"Client looking to add features: Queue length as a real time metric, etc.","timeline_txt":"FY funding starts June"},{"rep":"Patrick Loftus","title":"PERMnet - Healthcare MVP v1","value":168760,"stage":0.5,"commit":"Stretch","M":"Yes","B":"No","A":"Yes","N":"Yes","T":"No","metrics":"Success looks like a usable demo that his team can work with for capital obtainment.","budget":"Personally Funded Startup (Risk)","authority":"Yes, we have all stakeholders in every meeting","need":"Startup bringing a demo to market for more VC buy-in.","timeline_txt":"Next month we should be moving towards close"},{"rep":"Patrick Loftus","title":"TN DFA - ADA Solution","value":250000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"","timeline_txt":""},{"rep":"Patrick Loftus","title":"State of MD - ADA","value":150000,"stage":0.5,"commit":"Stretch","M":"Yes","B":"Yes","A":"Yes","N":"Yes","T":"Yes","metrics":"Document accuracy and fidelity, processing time, etc.","budget":"Marcy Jacobs, Deputy Director of MDIT, Also Chief Digital Experience Officer","authority":"Executive level and Project Stakeholders","need":"ADA accessibility via federal mandate","timeline_txt":"Federal mandate, but want to move fast on procurement."},{"rep":"Patrick Loftus","title":"University of Mary Washington Tableau Developer SA Opp","value":75000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"","timeline_txt":""},{"rep":"Patrick Loftus","title":"Chattanooga - Permit Solution","value":145250,"stage":0.5,"commit":"Stretch","M":"Yes","B":"Yes","A":"Yes","N":"Yes","T":"Yes","metrics":"City currently averages 17 days for simple residential permits, 22 days commercial.","budget":"Funding secured via email from Mayor Tim.","authority":"Mayor Tim Kelly (ultimate decision-maker), Mandy Green (COO)","need":"Immense political pressure from the Mayor's office to speed up housing development.","timeline_txt":"Implementation targeted for July 2026 (start of new fiscal year)."},{"rep":"Patrick Loftus","title":"TN Comptroller - ADA Solution","value":200000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"","timeline_txt":""},{"rep":"Patrick Loftus","title":"NCDIT - AI Accelerator Pilot to Prod","value":100000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"","timeline_txt":""},{"rep":"Patrick Loftus","title":"Anne Arundel Cty - ADA Remediation Solution","value":100000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"","timeline_txt":""},{"rep":"Patrick Loftus","title":"FIU - Analytics Research Project","value":100000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"","timeline_txt":""},{"rep":"Patrick Loftus","title":"VTTI - Hermes Assistant - Phase 2","value":2415420,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"","timeline_txt":""},{"rep":"Patrick Loftus","title":"VTTI - Hermes Assistant - Phase 3","value":1471120,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"","timeline_txt":""},{"rep":"Ryan D Trevarthen","title":"Neology - Project 1 of 5. Automated OCR Retraining","value":75000,"stage":0.25,"commit":"","M":"Yes","B":"Yes","A":"Yes","N":"Yes","T":"Yes","metrics":"Neology is doubling revenue. Key metric: model retraining time and accuracy.","budget":"$200,000","authority":"VP-CISO-VP of Product-COO-CEO","need":"Automate model retraining for license plate OCR to reduce manual effort.","timeline_txt":"Several critical, fast-approaching deadlines driving architectural decisions."},{"rep":"Ryan D Trevarthen","title":"AI-Enabled Construction Scheduling","value":50000,"stage":0.1,"commit":"Stretch","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"Financial value for implementing AI-enabled Construction Scheduling.","budget":"Parent company provides ~$50M ARR backstop.","authority":"Talha Mubeen, Lead Architect","need":"Rapid cash burn from unoptimized cloud infrastructure.","timeline_txt":"No hard deadline but urgency is sooner the better."},{"rep":"Ryan D Trevarthen","title":"Neology 2 of 5 - Agentic Collections","value":100000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"Demonstrate a 20-30% efficiency gain in toll collection follow-ups","budget":"TBD — show and tell phase","authority":"John Miller, Chris George, Austin PM and General Manager","need":"Unpaid toll recovery relies on manual follow-ups and lacks predictive modeling.","timeline_txt":"Pilot estimated 6-12 weeks, targeted for Austin TX deployment."},{"rep":"Ryan D Trevarthen","title":"Neology 3 of 5 - MANTIS-4D Agentic AI","value":50000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"Transitioning from simple search to automatically analyzing 48 hours of footage.","budget":"Show and tell phase","authority":"John Miller (VP of Product)","need":"Digital Detective for MANTIS-4D law enforcement platform.","timeline_txt":"Currently an active priority for Neology."},{"rep":"Ryan D Trevarthen","title":"Neology 4 of 5 - neoBOSS GKE Modernization","value":0,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"Must handle bursty tolling data, processing millions of transactions.","budget":"TBD — show and tell phase","authority":"Chris George","need":"Modernize neoBOSS back-office systems to support massive regional contract wins.","timeline_txt":"Outlined for the 2026 back-office rollout."},{"rep":"Ryan D Trevarthen","title":"Neology 5 of 5 - Predictive Dynamic Pricing","value":50000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"Algorithms must process real-time ground truth data (e.g. Waze accident data).","budget":"Show and tell phase","authority":"John Miller (VP of Product)","need":"Express Lane pricing needs to transition from reactive to predictive.","timeline_txt":"Established as a 2026 priority."},{"rep":"Stephanie Jean","title":"True Anomaly - Gemini Enterprise Foundation","value":50000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"Client currently maintains a 7-figure ARR agreement with Anthropic.","timeline_txt":""},{"rep":"Stephanie Jean","title":"The Akintonde Real Estate Group - Gemini Enterprise Workshop","value":5000,"stage":0.5,"commit":"Commit","M":"YES","B":"YES","A":"YES","N":"YES","T":"YES","metrics":"Client needs to consolidate multiple Marketing/AI tools for easier management.","budget":"$5,000","authority":"Maikol Akintonde - sole approver","need":"Client needs to consolidate multiple licenses being used for AI, Marketing, Research.","timeline_txt":"Current marketing subscriptions due to renew July 1."},{"rep":"Stephanie Jean","title":"Republic Bank - DocumentAI","value":15000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"","timeline_txt":""},{"rep":"Stephanie Jean","title":"Erika's Lighthouse - D&A Foundation Implementation","value":75000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"Automated flagging of schools with survey results below peer averages.","budget":"Yes","authority":"Yes","need":"Need advanced publicly accessible data analytics and reporting.","timeline_txt":"3 months"},{"rep":"Stephanie Jean","title":"Erika's Lighthouse - Gemini Enterprise Foundation","value":25000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"Ability to generate specific grade, 30-minute lesson plans.","budget":"Yes","authority":"","need":"Production-grade AI tool to customize evidence-based curriculum.","timeline_txt":"Rollout over the next 14 months."},{"rep":"Stephanie Jean","title":"Midwest Services Bureau - Gemini Enterprise Workshop","value":5000,"stage":0.5,"commit":"Stretch","M":"YES","B":"YES","A":"YES","N":"YES","T":"YES","metrics":"ROI-driven. Omar looking for 2:1 return.","budget":"Yes","authority":"Yes","need":"Automated sales/marketing workflows and robust Business Intelligence.","timeline_txt":"3 months"},{"rep":"Stephanie Jean","title":"Midwest Services Bureau - Google Workspace + GEBE","value":20000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"","timeline_txt":""},{"rep":"Sumner Crosby","title":"MN DPS | 2024 | MNCrash 2.0 App Rebuild","value":1700000,"stage":0.1,"commit":"Stretch","M":"No","B":"No","A":"Yes","N":"Yes","T":"No","metrics":"","budget":"","authority":"Yes","need":"Client needs their MNCrash Application rebuilt.","timeline_txt":""},{"rep":"Sumner Crosby","title":"SUNY - Virtual Teacher Assistant Services","value":3000000,"stage":0.25,"commit":"","M":"No","B":"No","A":"No","N":"Yes","T":"No","metrics":"","budget":"","authority":"","need":"Client looking to develop a Google-based student AI platform.","timeline_txt":""},{"rep":"Sumner Crosby","title":"SUNY - AI Advisor","value":280000,"stage":0.25,"commit":"","M":"Yes","B":"No","A":"Yes","N":"Yes","T":"Yes","metrics":"They provided a document with specific goals/desired functionalities.","budget":"Will be Google funded — working on how to get it funded.","authority":"Kim Scalzo: Deputy Provost","need":"AI Tutor agentic frameworks. Next phase of VTA.","timeline_txt":"Fall semester start — need to procure by end of May."},{"rep":"Sumner Crosby","title":"WA TSC - Blood Program Routing","value":75000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"Yes","T":"No","metrics":"","budget":"","authority":"","need":"Needs assistance with EMS routing and blood bank optimization.","timeline_txt":""},{"rep":"Sumner Crosby","title":"CO DOR - Open Records Routing","value":95000,"stage":0.25,"commit":"","M":"Yes","B":"No","A":"Yes","N":"Yes","T":"No","metrics":"Reduce manual routing and intake activities by >30%","budget":"Biggest sticky point. Funding opens July 1.","authority":"Chief Administrative Officer and Anissa.","need":"Current process for CORA (open records) managed using Google Sheets.","timeline_txt":"Likely Q3 deal post-July 1."},{"rep":"Sumner Crosby","title":"MA Trial Courts - Data Foundations","value":200000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"Yes","T":"No","metrics":"","budget":"","authority":"","need":"Need translation services for disabled, hard of hearing, and blind litigants.","timeline_txt":""},{"rep":"Sumner Crosby","title":"UT OGM - Phase II Discovery","value":175000,"stage":0.9,"commit":"Commit","M":"No","B":"Yes","A":"Yes","N":"Yes","T":"Yes","metrics":"WIP — first meetings to scope on Friday.","budget":"Approved: $935K one-time services, $850K ongoing (GCP and support).","authority":"Mick is the decision maker.","need":"Biggest challenges: automating Small Mine Permits, conversational interaction.","timeline_txt":"Mick needs to show progress by end of May to legislature."},{"rep":"Sumner Crosby","title":"LA County RRCC - Gemini Enterprise Foundations","value":10000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"","timeline_txt":""},{"rep":"Sumner Crosby","title":"State of Minnesota | Citation Analytics Full Build","value":500000,"stage":0.1,"commit":"","M":"No","B":"Yes","A":"No","N":"Yes","T":"No","metrics":"","budget":"Client willing to spend up to $1.25M in PSO credits.","authority":"","need":"Discovery project that would come before this project.","timeline_txt":""},{"rep":"Sumner Crosby","title":"Travis County TX - Gemini Enterprise Foundations","value":83000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"Yes","T":"No","metrics":"","budget":"","authority":"","need":"Customer having trouble consolidating ticketing information from KloudGin.","timeline_txt":""},{"rep":"Sumner Crosby","title":"Hawaii DCCA - ADA Compliance","value":74367,"stage":0.9,"commit":"Commit","M":"Yes","B":"Yes","A":"Yes","N":"Yes","T":"Yes","metrics":"Speeding up time to identify and process ADA compliance issues.","budget":"Up to $60K discretionary. Dean can spend immediately.","authority":"Dean Hazama: Deputy Director","need":"Struggling with ADA compliance in prep for April 2026 DOJ deadline.","timeline_txt":"DOJ deadline end of April"},{"rep":"Sumner Crosby","title":"SBU - GCP Foundations","value":58891,"stage":0.25,"commit":"","M":"Yes","B":"Yes","A":"Yes","N":"Yes","T":"Yes","metrics":"TBD","budget":"Pricing established. Waiting for final agreement.","authority":"Nate","need":"Needs GCP foundations to build and expand agentic workflow usage.","timeline_txt":"Very immediate — waiting for verbal yes from Nate within 3-5 days."},{"rep":"Sumner Crosby","title":"SBU - Training & Enablement","value":39984,"stage":0.25,"commit":"","M":"Yes","B":"Yes","A":"Yes","N":"Yes","T":"Yes","metrics":"TBD","budget":"Pricing established. Waiting for final agreement.","authority":"Nate","need":"Needs GCP training to build and expand agentic workflow usage.","timeline_txt":"Waiting for verbal yes from Nate within 3-5 days."},{"rep":"Sumner Crosby","title":"Arapahoe County CO - Gemini Foundations","value":125000,"stage":0.25,"commit":"","M":"Yes","B":"Yes","A":"Yes","N":"Yes","T":"No","metrics":"Scope actively changing — originally smaller foundation.","budget":"About $100K available, new expanded vision may require more.","authority":"Director of Innovation, Technology, Services — confirmed decision-maker.","need":"Unhappy with CoPilot and other agentic providers. Struggling with centralization.","timeline_txt":"Currently being re-evaluated. Scoping meeting set for Friday."},{"rep":"Sumner Crosby","title":"SUNY - PSO GCP Landing Zone","value":250000,"stage":0.25,"commit":"","M":"No","B":"Yes","A":"Yes","N":"Yes","T":"Yes","metrics":"Get a landing zone built for professors to upload content and use GenAI.","budget":"$100-300K. PSO will provide SOW.","authority":"Kim Scalzo: Deputy Provost","need":"SUNY needs a landing zone for professors to build a corpus of information.","timeline_txt":"Not sure yet"},{"rep":"Sumner Crosby","title":"CSULB - ADA Accessibility","value":75000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"","timeline_txt":""},{"rep":"Sumner Crosby","title":"LAC BOS - ADA Compliance","value":75000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"","timeline_txt":""},{"rep":"Sumner Crosby","title":"UCSB - Gemini Enterprise Foundations","value":60000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"","timeline_txt":""},{"rep":"Sumner Crosby","title":"UT OGM - Phase II Fixed Capacity","value":658896,"stage":0.9,"commit":"Commit","M":"No","B":"Yes","A":"Yes","N":"Yes","T":"Yes","metrics":"-","budget":"-","authority":"Mick is the decision maker.","need":"Automate Small Mine Permits and provide conversational interaction.","timeline_txt":"-"},{"rep":"Sumner Crosby","title":"UT DEQ - Agentic Workflows","value":200000,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"","timeline_txt":""},{"rep":"Sumner Crosby","title":"UT OGM - RBDMS Replacement","value":0,"stage":0.1,"commit":"","M":"No","B":"No","A":"No","N":"No","T":"No","metrics":"","budget":"","authority":"","need":"","timeline_txt":""}];
+
+// ════════════════════════════════════════════════ TABS
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ════════════════════════════════════════════════ HELPERS
+const fmt = v => '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v.toLocaleString());
+Chart.defaults.color = '#7a80a0';
+Chart.defaults.borderColor = '#2e334d';
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
+// ════════════════════════════════════════════════ DASHBOARD CHARTS
+
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: {
+    labels: DASH.trend.map(d => d.date),
+    datasets: [
+      { label: 'Total Pipeline', data: DASH.trend.map(d => d.val), borderColor: '#FFC836', backgroundColor: 'rgba(255,200,54,0.07)', fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6 },
+      { label: 'Commit', data: DASH.trend.map(d => d.commit), borderColor: '#43d692', backgroundColor: 'rgba(67,214,146,0.1)', fill: true, tension: 0.3, pointRadius: 3, borderDash: [4,3] },
+    ]
+  },
+  options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } }, tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.parsed.y)}` } } },
+    scales: { x: { grid: { color: 'rgba(46,51,77,0.5)' }, ticks: { maxRotation: 45, font: { size: 11 } } }, y: { grid: { color: 'rgba(46,51,77,0.5)' }, ticks: { callback: v => fmt(v), font: { size: 11 } } } }
+  }
+});
+
+new Chart(document.getElementById('commitDonut'), {
+  type: 'doughnut',
+  data: { labels: ['Uncommitted', 'Stretch', 'Commit'], datasets: [{ data: [DASH.commit_breakdown.Uncommitted, DASH.commit_breakdown.Stretch, DASH.commit_breakdown.Commit], backgroundColor: ['#2e334d','#FFC836','#43d692'], borderWidth: 0, hoverOffset: 6 }] },
+  options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12, font: { size: 12 } } }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.parsed)}` } } } }
+});
+
+const repEl = document.getElementById('repTable');
+const totalVal = Object.values(DASH.by_rep).reduce((s,r) => s+r.value, 0);
+const maxVal = Math.max(...Object.values(DASH.by_rep).map(r => r.value));
+const repColors = { 'Sumner Crosby': '#4a86e8', 'Patrick Loftus': '#43d692' };
+Object.entries(DASH.by_rep).forEach(([rep, d]) => {
+  const pct = (d.value / totalVal * 100).toFixed(1);
+  const barW = (d.value / maxVal * 100).toFixed(1);
+  const color = repColors[rep] || '#7a80a0';
+  const row = document.createElement('tr');
+  row.innerHTML = `<td>${rep}</td><td style="text-align:right">${d.count}</td><td style="text-align:right">${fmt(d.value)}</td><td style="text-align:right;width:100px"><div>${pct}%</div><div class="rep-mini-bar"><div class="rep-mini-fill" style="width:${barW}%;background:${color}"></div></div></td>`;
+  repEl.appendChild(row);
+});
+
+new Chart(document.getElementById('vertChart'), {
+  type: 'bar',
+  data: { labels: Object.keys(DASH.by_vert), datasets: [{ data: Object.values(DASH.by_vert).map(v => v.value), backgroundColor: ['#4a86e8','#43d692','#7a80a0','#a479e2','#ffad47'], borderRadius: 4, borderWidth: 0 }] },
+  options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${fmt(ctx.parsed.x)}` } } }, scales: { x: { ticks: { callback: v => fmt(v), font: { size: 11 } }, grid: { color: 'rgba(46,51,77,0.5)' } }, y: { ticks: { font: { size: 12 } }, grid: { display: false } } } }
+});
+
+const stageEl = document.getElementById('stageFunnel');
+const stageColors = ['#4a86e8','#a479e2','#FFC836','#43d692'];
+const maxStage = Math.max(...Object.values(DASH.by_stage).map(s => s.value));
+Object.entries(DASH.by_stage).forEach(([stage, d], i) => {
+  const w = (d.value / maxStage * 100).toFixed(1);
+  const div = document.createElement('div'); div.className = 'funnel-row';
+  div.innerHTML = `<div class="funnel-label">${stage}</div><div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${w}%;background:${stageColors[i]}20;border-left:3px solid ${stageColors[i]}"><span style="color:${stageColors[i]}">${d.count} opps</span></div></div><div class="funnel-val">${fmt(d.value)}</div>`;
+  stageEl.appendChild(div);
+});
+
+new Chart(document.getElementById('typeDonut'), {
+  type: 'doughnut',
+  data: { labels: Object.keys(DASH.by_type), datasets: [{ data: Object.values(DASH.by_type).map(v => v.value), backgroundColor: ['#4a86e8','#FFC836','#43d692'], borderWidth: 0, hoverOffset: 6 }] },
+  options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 8, font: { size: 11 } } }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.parsed)}` } } } }
+});
+
+const monthOrder = ['May 2026','Jun 2026','Jul 2026','Aug 2026','Sep 2026','Nov 2026','Jan 2027'];
+new Chart(document.getElementById('closeMonth'), {
+  type: 'bar',
+  data: { labels: monthOrder.map(m => m.replace(' 2026','').replace(' 2027',' \'27')), datasets: [{ data: monthOrder.map(m => DASH.by_month[m]?.value || 0), backgroundColor: monthOrder.map(m => m === 'Jun 2026' ? '#43d692' : m.includes('2027') ? '#7a80a0' : '#4a86e8'), borderRadius: 4, borderWidth: 0 }] },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${fmt(ctx.parsed.y)}` } } }, scales: { x: { ticks: { font: { size: 11 } }, grid: { display: false } }, y: { ticks: { callback: v => fmt(v), font: { size: 11 } }, grid: { color: 'rgba(46,51,77,0.5)' } } } }
+});
+
+new Chart(document.getElementById('outcomeChart'), {
+  type: 'doughnut',
+  data: { labels: ['Closed Won','Disqualified','Closed Lost'], datasets: [{ data: [DASH.closed.won, DASH.closed.disq, DASH.closed.lost], backgroundColor: ['#43d692','#fb4c2f','#ffad47'], borderWidth: 0, hoverOffset: 6 }] },
+  options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } }, tooltip: { callbacks: { label: ctx => { const vals = [DASH.closed.won_val, DASH.closed.disq_val, DASH.closed.lost_val]; return ` ${ctx.label}: ${ctx.parsed} opps (${fmt(vals[ctx.dataIndex])})`; } } } } }
+});
+
+const dqEl = document.getElementById('dqList');
+const maxDQ = Math.max(...Object.values(DASH.dq_reasons));
+Object.entries(DASH.dq_reasons).forEach(([reason, count]) => {
+  const w = (count / maxDQ * 100).toFixed(0);
+  const div = document.createElement('div'); div.className = 'dq-row';
+  div.innerHTML = `<div class="dq-top"><span class="reason">${reason}</span><span class="count">${count}×</span></div><div class="dq-track"><div class="dq-fill" style="width:${w}%"></div></div>`;
+  dqEl.appendChild(div);
+});
+
+const mbantDefs = [
+  { letter: 'M', name: 'Metrics',   desc: 'Do we know the measurable business impact they want?' },
+  { letter: 'B', name: 'Budget',    desc: 'Is budget confirmed or actively being found?' },
+  { letter: 'A', name: 'Authority', desc: 'Are we talking to the person who can say yes?' },
+  { letter: 'N', name: 'Need',      desc: 'Is there a clear, confirmed problem we solve?' },
+  { letter: 'T', name: 'Timeline',  desc: 'Is there a real deadline driving urgency?' },
+];
+const mbantGridEl = document.getElementById('mbantGrid');
+mbantDefs.forEach(({ letter, name, desc }) => {
+  const d = DASH.mbant[letter];
+  const pct = Math.round(d.yes / 50 * 100);
+  const color = pct >= 40 ? '#43d692' : pct >= 25 ? '#FFC836' : '#fb4c2f';
+  const bgColor = pct >= 40 ? 'rgba(67,214,146,0.12)' : pct >= 25 ? 'rgba(255,200,54,0.12)' : 'rgba(251,76,47,0.12)';
+  const div = document.createElement('div'); div.className = 'mbant-row';
+  div.innerHTML = `<div class="mbant-badge" style="background:${bgColor};color:${color}">${letter}</div><div class="mbant-info"><div class="mbant-criterion">${name}</div><div class="mbant-desc">${desc}</div></div><div class="mbant-counts"><div class="pass-line" style="color:${color}">${d.yes} of 50 opps</div><div class="mbant-count-track"><div class="mbant-count-fill" style="width:${pct}%;background:${color}"></div></div></div>`;
+  mbantGridEl.appendChild(div);
+});
+
+// ════════════════════════════════════════════════ PIPELINE TABLE
+let pipeSort = { key: 'value', dir: -1 };
+
+function stagePill(stage) {
+  const cls = stage === 'Qualifying' ? 'qualifying' : stage === 'Qualified Opportunity' ? 'qualified' : stage === 'Proposed' ? 'proposed' : 'conditional';
+  return `<span class="stage-pill ${cls}">${stage}</span>`;
+}
+function commitPill(c) {
+  if (!c) return '';
+  return `<span class="commit-pill ${c.toLowerCase()}">${c}</span>`;
+}
+function probBar(p) {
+  const color = p >= 75 ? '#43d692' : p >= 50 ? '#FFC836' : p >= 25 ? '#4a86e8' : '#7a80a0';
+  return `<div class="prob-bar-wrap"><div class="prob-bar-track"><div class="prob-bar-fill" style="width:${p}%;background:${color}"></div></div><span class="prob-label">${p}%</span></div>`;
+}
+
+function sortPipeline(key) {
+  if (pipeSort.key === key) pipeSort.dir *= -1;
+  else { pipeSort.key = key; pipeSort.dir = -1; }
+  document.querySelectorAll('.pipe-table thead th').forEach(th => th.classList.remove('sorted'));
+  const el = document.getElementById('sh-' + key);
+  if (el) { el.classList.add('sorted'); el.querySelector('.sort-icon').textContent = pipeSort.dir === 1 ? '↑' : '↓'; }
+  renderPipeline();
+}
+
+function renderPipeline() {
+  const search = document.getElementById('pipeSearch').value.toLowerCase();
+  const rep    = document.getElementById('pipeRep').value;
+  const stage  = document.getElementById('pipeStage').value;
+  const commit = document.getElementById('pipeCommit').value;
+
+  let rows = OPPS.filter(o => {
+    if (rep && o.rep !== rep) return false;
+    if (stage && o.stage !== stage) return false;
+    if (commit === 'None' && o.commit) return false;
+    if (commit && commit !== 'None' && o.commit !== commit) return false;
+    if (search) {
+      const hay = [o.rep, o.title, o.vertical, o.next_step, o.timeline].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  rows.sort((a, b) => {
+    const va = a[pipeSort.key] || 0, vb = b[pipeSort.key] || 0;
+    return typeof va === 'string' ? va.localeCompare(vb) * pipeSort.dir : (va - vb) * pipeSort.dir;
+  });
+
+  document.getElementById('pipeCount').textContent = `${rows.length} of ${OPPS.length} opportunities`;
+  const body = document.getElementById('pipeBody');
+  body.innerHTML = '';
+  rows.forEach(o => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="white-space:nowrap;font-weight:600">${o.rep.split(' ')[0]} ${o.rep.split(' ').slice(-1)[0]}</td>
+      <td class="title-cell"><div class="opp-title">${o.title}</div><div class="next-step">${o.next_step || ''}</div></td>
+      <td class="val-cell">${o.value > 0 ? fmt(o.value) : '—'}</td>
+      <td>${stagePill(o.stage)}</td>
+      <td>${probBar(o.prob)}</td>
+      <td>${commitPill(o.commit)}</td>
+      <td class="num-cell">${o.days_open}d</td>
+      <td class="num-cell" style="white-space:nowrap">${o.close}</td>
+      <td style="font-size:12px;color:var(--muted)">${o.vertical || '—'}</td>`;
+    body.appendChild(tr);
+  });
+}
+renderPipeline();
+
+// ════════════════════════════════════════════════ MBANT TAB
+
+// Criterion KPIs
+const mbantKpiRow = document.getElementById('mbantKpiRow');
+const mbantFullDefs = [
+  { letter:'M', name:'Metrics',   q:'Do we know the success metric?' },
+  { letter:'B', name:'Budget',    q:'Is funding confirmed?' },
+  { letter:'A', name:'Authority', q:'Are we talking to the decision-maker?' },
+  { letter:'N', name:'Need',      q:'Is the problem clearly defined?' },
+  { letter:'T', name:'Timeline',  q:'Is there a real deadline?' },
+];
+mbantFullDefs.forEach(({ letter, name, q }) => {
+  const d = DASH.mbant[letter];
+  const pct = Math.round(d.yes / 50 * 100);
+  const color = pct >= 40 ? '#43d692' : pct >= 25 ? '#FFC836' : '#fb4c2f';
+  const div = document.createElement('div'); div.className = 'mbant-kpi';
+  div.innerHTML = `<div class="mk-letter" style="color:${color}">${letter}</div><div class="mk-name">${name}</div><div class="mk-count" style="color:${color}">${d.yes}<span style="font-size:13px;font-weight:400;color:var(--muted)"> / 50</span></div><div class="mk-sub">${q}</div><div class="mk-track"><div class="mk-fill" style="width:${pct}%;background:${color}"></div></div>`;
+  mbantKpiRow.appendChild(div);
+});
+
+// Per-opp MBANT table
+function yesNo(v) {
+  const isYes = v && v.toLowerCase() === 'yes';
+  return `<div class="dot ${isYes ? 'yes' : 'no'}">${isYes ? '✓' : '·'}</div>`;
+}
+function scoreSegs(o) {
+  const fields = ['M','B','A','N','T'];
+  return `<div class="score-bar">${fields.map(f => {
+    const yes = o[f] && o[f].toLowerCase() === 'yes';
+    return `<div class="score-seg" style="background:${yes ? '#43d692' : '#2e334d'}"></div>`;
+  }).join('')}</div>`;
+}
+
+function renderMbant() {
+  const search = document.getElementById('mbantSearch').value.toLowerCase();
+  const filter = document.getElementById('mbantFilter').value;
+  const rep    = document.getElementById('mbantRep').value;
+
+  const rows = MBANT_OPPS.filter(o => {
+    if (rep && o.rep !== rep) return false;
+    const score = ['M','B','A','N','T'].filter(f => o[f] && o[f].toLowerCase() === 'yes').length;
+    if (filter === 'full' && score < 5) return false;
+    if (filter === 'partial' && (score === 0 || score === 5)) return false;
+    if (filter === 'none' && score > 0) return false;
+    if (search) {
+      const hay = [o.rep, o.title].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  const body = document.getElementById('mbantBody');
+  body.innerHTML = '';
+
+  rows.forEach((o, idx) => {
+    const detailId = 'md-' + idx;
+    const score = ['M','B','A','N','T'].filter(f => o[f] && o[f].toLowerCase() === 'yes').length;
+    const scoreColor = score === 5 ? '#43d692' : score > 0 ? '#FFC836' : '#7a80a0';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="title-col"><div class="t">${o.title}</div><div class="r">${o.rep}</div></td>
+      <td style="text-align:right;font-weight:600;white-space:nowrap">${o.value > 0 ? fmt(o.value) : '—'}</td>
+      <td><div style="display:flex;align-items:center;gap:8px">${scoreSegs(o)}<span style="font-size:12px;color:${scoreColor};font-weight:700">${score}/5</span></div></td>
+      <td>${yesNo(o.M)}</td>
+      <td>${yesNo(o.B)}</td>
+      <td>${yesNo(o.A)}</td>
+      <td>${yesNo(o.N)}</td>
+      <td>${yesNo(o.T)}</td>`;
+    tr.onclick = () => {
+      const dr = document.getElementById(detailId);
+      dr.classList.toggle('open');
+    };
+    body.appendChild(tr);
+
+    // detail expansion row
+    const labels = { M: 'Metrics', B: 'Budget', A: 'Authority', N: 'Need', T: 'Timeline' };
+    const detailTr = document.createElement('tr');
+    detailTr.className = 'detail-row';
+    detailTr.id = detailId;
+    const cells = ['M','B','A','N','T'].map(f => {
+      const val = o[f === 'M' ? 'metrics' : f === 'B' ? 'budget' : f === 'A' ? 'authority' : f === 'N' ? 'need' : 'timeline_txt'];
+      const yes = o[f] && o[f].toLowerCase() === 'yes';
+      const color = yes ? '#43d692' : '#fb4c2f';
+      return `<div class="detail-cell"><div class="dc-label" style="color:${color}">${labels[f]} ${yes ? '✓' : '✗'}</div><div class="dc-val${val ? '' : ' empty'}">${val || 'Not captured yet'}</div></div>`;
+    }).join('');
+    detailTr.innerHTML = `<td colspan="8"><div class="detail-inner"><div style="font-size:11px;color:var(--muted);margin-bottom:8px">Qualification detail for <strong style="color:var(--text)">${o.title}</strong></div><div class="detail-grid">${cells}</div></div></td>`;
+    body.appendChild(detailTr);
+  });
+}
+renderMbant();
+</script>
+</body>
+</html>
